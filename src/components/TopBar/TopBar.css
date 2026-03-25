@@ -1,0 +1,73 @@
+.topbar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 20px;
+}
+
+.topbar-title {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--accent);
+  letter-spacing: 0.04em;
+}
+
+.clock-block { text-align: center; }
+
+.clock {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 3rem;
+  color: var(--text);
+  letter-spacing: 0.05em;
+}
+
+.clock-date {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.weather-block {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.weather-loading {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.weather-day {
+  text-align: center;
+  background: var(--surface2);
+  border-radius: 8px;
+  padding: 8px 12px;
+  min-width: 70px;
+}
+
+.weather-day .day-name {
+  font-size: 0.7rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.weather-day .weather-icon { font-size: 1.3rem; margin-bottom: 2px; }
+
+.weather-day .temp {
+  font-size: 1.1rem;
+  font-weight: 500;
+  color: var(--accent2);
+  margin: 4px 0 2px;
+}
+
+.weather-day .condition {
+  font-size: 0.65rem;
+  color: var(--muted);
+}

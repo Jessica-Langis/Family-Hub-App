@@ -1,0 +1,57 @@
+.bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: var(--nav-h);
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  z-index: 1000;
+}
+
+.nav-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7rem;
+  padding: 8px 4px;
+  position: relative;
+}
+
+.nav-tab:hover { background: var(--surface2); }
+
+.nav-tab.active { color: var(--accent); }
+
+.nav-tab.active::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--accent);
+  border-radius: 0 0 2px 2px;
+}
+
+/* Per-tab accent overrides */
+.nav-tab[data-tab="parentals"].active       { color: var(--accent2); }
+.nav-tab[data-tab="parentals"].active::after { background: var(--accent2); }
+.nav-tab[data-tab="tori"].active            { color: var(--accent4); }
+.nav-tab[data-tab="tori"].active::after     { background: var(--accent4); }
+.nav-tab[data-tab="nova"].active            { color: var(--accent3); }
+.nav-tab[data-tab="nova"].active::after     { background: var(--accent3); }
+.nav-tab[data-tab="fun"].active             { color: var(--accent5); }
+.nav-tab[data-tab="fun"].active::after      { background: var(--accent5); }
+
+.nav-icon  { font-size: 1.3rem; }
+.nav-label { font-weight: 500; }
