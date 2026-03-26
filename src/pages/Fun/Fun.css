@@ -1,0 +1,165 @@
+.fun-content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* ── List ── */
+.fun-list {
+  padding: 8px 14px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.fun-empty {
+  padding: 8px 14px;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.fun-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.82rem;
+  color: var(--text);
+}
+.fun-item:last-child { border-bottom: none; }
+
+.fun-item-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--accent5);
+}
+
+.fun-item-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.fun-item-title {
+  font-size: 0.82rem;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fun-item-sub {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.fun-item-tag {
+  font-size: 0.65rem;
+  color: var(--muted);
+  background: var(--surface2);
+  padding: 2px 7px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.fun-delete {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+.fun-delete:hover { color: #e07070; }
+
+/* ── Modal overlay ── */
+.fun-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.fun-overlay-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 20px 20px;
+  width: min(360px, 92vw);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fun-overlay-title {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--accent5);
+  margin-bottom: 4px;
+}
+
+.fun-overlay-input {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+  color: var(--text);
+  font-family: inherit;
+  width: 100%;
+}
+.fun-overlay-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.fun-overlay-status {
+  font-size: 0.78rem;
+  color: var(--accent3);
+  min-height: 1rem;
+  text-align: center;
+}
+
+.fun-overlay-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.fun-overlay-btn {
+  padding: 7px 18px;
+  border-radius: 7px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.fun-overlay-btn:hover { opacity: 0.85; }
+.fun-overlay-btn.cancel {
+  background: var(--surface2);
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+.fun-overlay-btn.submit {
+  background: var(--accent);
+  color: #0f1117;
+}
+.fun-overlay-btn:disabled { opacity: 0.5; cursor: not-allowed; }

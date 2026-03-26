@@ -1,16 +1,37 @@
-.tab-layout {
-  display: flex;
-  flex-direction: column;
+/* ── 3-col grid ── */
+.parentals-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-areas: "todo meals agenda";
   gap: 8px;
   height: 100%;
-  padding: 0;
   min-height: 0;
+  overflow: hidden;
 }
 
-.placeholder-body {
-  padding: 16px;
-  color: var(--muted);
-  font-size: 0.82rem;
-  font-style: italic;
+.parentals-grid > :nth-child(1) { grid-area: todo; }
+.parentals-grid > :nth-child(2) { grid-area: meals; }
+.parentals-grid > :nth-child(3) { grid-area: agenda; }
+
+/* Accent colour override for this tab */
+.parentals-grid .section-title { color: var(--accent2); }
+
+/* ── Agenda iframe ── */
+.agenda-panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.agenda-iframe-wrap {
   flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  border-radius: 0 0 12px 12px;
+}
+
+.agenda-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
 }
