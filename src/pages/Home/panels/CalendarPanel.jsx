@@ -7,8 +7,8 @@ const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December']
 
 // Events can be plain strings or objects { name, time }
-function evName(ev) { return typeof ev === 'string' ? ev : (ev.name || '') }
-function evTime(ev) { return typeof ev === 'string' ? null : (ev.time || null) }
+function evName(ev) { return typeof ev === 'string' ? ev : (ev.summary || ev.name || '') }
+function evTime(ev) { return typeof ev === 'string' ? null : (ev.startTime || ev.time || null) }
 
 function DayDetailModal({ dateStr, events, onClose }) {
   const d = new Date(dateStr + 'T00:00:00')
@@ -128,7 +128,7 @@ export default function CalendarPanel() {
                   {events.length > 0 && (
                     <div className="cal-pills">
                       {events.slice(0, 2).map((ev, i) => (
-                        <div key={i} className="cal-pill">{ev}</div>
+                        <div key={i} className="cal-pill">{evName(ev)}</div>
                       ))}
                       {events.length > 2 && <div className="cal-pill-more">+{events.length - 2}</div>}
                     </div>

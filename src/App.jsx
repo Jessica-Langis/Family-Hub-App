@@ -23,13 +23,21 @@ const TAB_TITLES = {
   nova:      'Nova',
 }
 
+const TAB_COLORS = {
+  home:      'var(--accent)',
+  fun:       'var(--accent5)',
+  parentals: 'var(--accent2)',
+  tori:      'var(--accent4)',
+  nova:      'var(--accent3)',
+}
+
 export default function App() {
   const [activeTab, setActiveTab] = useState('home')
   const Page = PAGES[activeTab]
 
   return (
     <>
-      <TopBar title={TAB_TITLES[activeTab]} />
+      <TopBar title={TAB_TITLES[activeTab]} titleColor={TAB_COLORS[activeTab]} />
       <main className="main-content">
         <Page />
       </main>

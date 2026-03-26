@@ -1,9 +1,44 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Component } from 'react'
 import Panel, { PanelHeader } from '../../components/Panel/Panel'
 import { SCRIPTS, apiFetch } from '../../api/scripts'
 import { getDayDiff, formatDateShort, formatReminderDate } from '../Home/homeUtils'
 import { TORI_HYPE, pickDailyIndex } from '../../data/hypeContent'
 import './Tori.css'
+
+// ── Normalize API response → array ───────────────────────────
+// GAS can return bare arrays, or wrapped like {result:[...]}, {items:[...]}, etc.
+function toArr(d) {
+  if (Array.isArray(d)) return d
+  if (d && Array.isArray(d.result)) return d.result
+  if (d && Array.isArray(d.items))  return d.items
+  if (d && Array.isArray(d.data))   return d.data
+  return []
+}
+
+// ── Error boundary ────────────────────────────────────────────
+class ToriErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(e) { return { error: e } }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: '20px', color: 'var(--muted)', fontSize: '0.85rem' }}>
+          <div style={{ color: '#e07070', marginBottom: 8 }}>⚠ Tori page crashed</div>
+          <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}>
+            {this.state.error?.message}
+          </div>
+          <button
+            style={{ marginTop: 12, padding: '4px 12px', background: 'var(--surface2)',
+              border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)',
+              cursor: 'pointer', fontSize: '0.8rem' }}
+            onClick={() => this.setState({ error: null })}
+          >Retry</button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // ── helpers ──────────────────────────────────────────────────
 function choreBadgeCls(dateStr) {
@@ -24,7 +59,7 @@ export default function Tori() {
     try {
       const res  = await apiFetch(`${SCRIPTS.TORI}?type=events`)
       const data = await res.json()
-      setEvents(data || [])
+      setEvents(toArr(data))
     } catch (e) {
       console.error('tori events', e)
     } finally {
@@ -35,16 +70,18 @@ export default function Tori() {
   useEffect(() => { loadEvents() }, [loadEvents])
 
   return (
-    <div className="tori-content">
-      <div className="ta-thisweek"><ThisWeekPanel /></div>
-      <div className="ta-pb"><PBsPanel /></div>
-      <div className="ta-hype"><HypePanel /></div>
-      <div className="ta-nextup"><NextUpPanel events={events} loading={evtLoading} onRefresh={loadEvents} /></div>
-      <div className="ta-reminders"><RemindersPanel /></div>
-      <div className="ta-schedule"><SchedulePanel /></div>
-      <div className="ta-todo"><TodoPanel /></div>
-      <div className="ta-events"><EventsPanel events={events} loading={evtLoading} onRefresh={loadEvents} /></div>
-    </div>
+    <ToriErrorBoundary>
+      <div className="tori-content">
+        <div className="ta-thisweek"><ThisWeekPanel /></div>
+        <div className="ta-pb"><PBsPanel /></div>
+        <div className="ta-hype"><HypePanel /></div>
+        <div className="ta-nextup"><NextUpPanel events={events} loading={evtLoading} onRefresh={loadEvents} /></div>
+        <div className="ta-reminders"><RemindersPanel /></div>
+        <div className="ta-schedule"><SchedulePanel /></div>
+        <div className="ta-todo"><TodoPanel /></div>
+        <div className="ta-events"><EventsPanel events={events} loading={evtLoading} onRefresh={loadEvents} /></div>
+      </div>
+    </ToriErrorBoundary>
   )
 }
 
@@ -125,7 +162,7 @@ function PBsPanel() {
     try {
       const res  = await apiFetch(`${SCRIPTS.TORI}?type=pbs`)
       const data = await res.json()
-      setPbs(data || [])
+      setPbs(toArr(data))
     } catch (e) { console.error('pbs load', e) }
     finally { setLoading(false) }
   }, [])
@@ -235,7 +272,7 @@ function NextUpPanel({ events, loading, onRefresh }) {
   const [form, setForm]       = useState({ name: '', evtType: '', date: '', location: '' })
   const [saving, setSaving]   = useState(false)
 
-  const upcoming = events
+  const upcoming = toArr(events)
     .filter(e => getDayDiff(e.date) >= 0)
     .sort((a, b) => getDayDiff(a.date) - getDayDiff(b.date))
 
@@ -325,7 +362,7 @@ function RemindersPanel() {
     try {
       const res  = await apiFetch(`${SCRIPTS.TORI}?type=reminders`)
       const data = await res.json()
-      setReminders(data || [])
+      setReminders(toArr(data))
     } catch (e) { console.error('reminders load', e) }
     finally { setLoading(false) }
   }, [])
@@ -418,7 +455,7 @@ function SchedulePanel() {
     try {
       const res  = await apiFetch(`${SCRIPTS.TORI}?type=schedule`)
       const data = await res.json()
-      setSchedule(data || [])
+      setSchedule(toArr(data))
     } catch (e) { console.error('schedule load', e) }
     finally { setLoading(false) }
   }, [])
@@ -515,7 +552,7 @@ function TodoPanel() {
     try {
       const res  = await apiFetch(`${SCRIPTS.CHORES}?type=chores`)
       const data = await res.json()
-      const filtered = (data || [])
+      const filtered = toArr(data)
         .filter(c => c.who === 'tori')
         .sort((a, b) => {
           const da = getDayDiff(a.dueDate), db = getDayDiff(b.dueDate)
@@ -531,14 +568,14 @@ function TodoPanel() {
 
   useEffect(() => { load() }, [load])
 
-  async function toggle(idx, done) {
-    const updated = chores.map((c, i) => i === idx ? { ...c, done: !done } : c)
+  async function toggle(id, done) {
+    const updated = chores.map(c => c.id === id ? { ...c, done: !done } : c)
     setChores(updated)
     try {
       const fd = new FormData()
       fd.append('action', 'toggle')
       fd.append('type', 'chores')
-      fd.append('idx', String(idx))
+      fd.append('idx', String(id))
       fd.append('done', String(!done))
       await apiFetch(SCRIPTS.CHORES, { method: 'POST', body: fd })
     } catch (e) { console.error('toggle', e); setChores(chores) }
@@ -556,7 +593,7 @@ function TodoPanel() {
                 const badge = c.dueDate ? choreBadgeCls(c.dueDate) : null
                 return (
                   <div key={c.id ?? i} className="chore-item">
-                    <input type="checkbox" checked={!!c.done} onChange={() => toggle(i, !!c.done)} />
+                    <input type="checkbox" checked={!!c.done} onChange={() => toggle(c.id, !!c.done)} />
                     <span className={`chore-item-name${c.done ? ' done' : ''}`}>{c.name}</span>
                     {badge && (
                       <span className={`countdown-badge ${badge}`}>{formatDateShort(c.dueDate)}</span>
@@ -572,7 +609,7 @@ function TodoPanel() {
 
 // ── Events panel (countdown list) ────────────────────────────
 function EventsPanel({ events, loading, onRefresh }) {
-  const sorted = [...events].sort((a, b) => getDayDiff(a.date) - getDayDiff(b.date))
+  const sorted = [...toArr(events)].sort((a, b) => getDayDiff(a.date) - getDayDiff(b.date))
 
   return (
     <Panel>

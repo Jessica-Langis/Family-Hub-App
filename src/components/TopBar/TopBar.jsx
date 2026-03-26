@@ -2,13 +2,13 @@ import { useClock }   from '../../hooks/useClock'
 import { useWeather } from '../../hooks/useWeather'
 import './TopBar.css'
 
-export default function TopBar({ title }) {
+export default function TopBar({ title, titleColor }) {
   const { clock, date }      = useClock()
   const { days, loading }    = useWeather()
 
   return (
     <div className="topbar">
-      <div className="topbar-title">{title}</div>
+      <div className="topbar-title" style={titleColor ? { color: titleColor } : {}}>{title}</div>
 
       <div className="clock-block">
         <div className="clock">{clock}</div>

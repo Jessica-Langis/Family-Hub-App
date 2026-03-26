@@ -2,13 +2,13 @@
 .home-content {
   display: grid;
   grid-template-columns: 0.85fr 1fr 1fr;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr 0.85fr;
   grid-template-areas:
     "today    comingup  grocery"
     "bulletin calendar  calendar"
     "whereami calendar  calendar";
   gap: 8px;
-  height: 100%;
+  flex: 1;
   min-height: 0;
   overflow: hidden;
 }
@@ -400,3 +400,44 @@
   cursor: pointer; font-weight: 600; transition: opacity 0.15s;
 }
 .add-btn:hover { opacity: 0.85; }
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .home-content {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "today"
+      "comingup"
+      "grocery"
+      "bulletin"
+      "calendar"
+      "whereami";
+    flex: none;
+    height: auto;
+    overflow: visible;
+    gap: 8px;
+  }
+
+  .hg-today, .hg-comingup, .hg-grocery,
+  .hg-bulletin, .hg-whereami {
+    min-height: 200px;
+    overflow: visible;
+  }
+
+  /* calendar needs a fixed height so its 1fr rows don't collapse */
+  .hg-calendar {
+    height: 380px;
+    overflow: hidden;
+  }
+
+  /* grocery 2-col looks fine on mobile, but let items wrap more easily */
+  .grocery-grid { grid-template-columns: 1fr 1fr; }
+
+  /* coming-up subcols can go single column */
+  .fp-stack {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .fp-divider { display: none; }
+}

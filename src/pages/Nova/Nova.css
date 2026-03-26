@@ -1,9 +1,9 @@
 /* ── 3-row outer grid ── */
 .nova-content {
   display: grid;
-  grid-template-rows: 0.85fr 0.85fr 1.3fr;
+  grid-template-rows: 1fr 1fr 1fr;
   gap: 8px;
-  height: 100%;
+  flex: 1;
   min-height: 0;
   overflow: hidden;
 }
@@ -61,7 +61,8 @@
   justify-content: flex-start;
   gap: 8px;
   min-height: 0;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
   position: relative;
 }
 
@@ -130,10 +131,6 @@
 }
 
 .fun-fact-text {
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
   font-size: 0.88rem;
   line-height: 1.55;
   color: var(--text);
@@ -192,3 +189,37 @@
 /* ── Accent overrides ── */
 .nova-content .section-title { color: var(--accent3); }
 .nova-content .chore-item input[type="checkbox"] { accent-color: var(--accent3); }
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .nova-content {
+    grid-template-rows: auto auto auto;
+    flex: none;
+    height: auto;
+    overflow: visible;
+    gap: 8px;
+  }
+
+  /* Row 1: stack This Week above Hype */
+  .nova-row-1 {
+    grid-template-columns: 1fr;
+    overflow: visible;
+  }
+  .nova-row-1 > * { min-height: 110px; overflow: visible; }
+
+  /* Row 2: 2-col grid for the 4 fun tiles — they're compact */
+  .nova-row-2 {
+    grid-template-columns: 1fr 1fr;
+    overflow: visible;
+  }
+  .fun-fact-panel  { min-height: 140px; }
+  .nova-today-panel { min-height: 100px; }
+
+  /* Row 3: 2-col grid for the 4 info panels */
+  .nova-row-3 {
+    grid-template-columns: 1fr 1fr;
+    overflow: visible;
+  }
+  .na-cell { min-height: 200px; overflow: visible; }
+  .na-cell .panel { flex: none; min-height: 180px; }
+}

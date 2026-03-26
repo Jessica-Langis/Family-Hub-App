@@ -8,7 +8,7 @@
     "hype     nextup   reminders"
     "schedule todo     events";
   gap: 8px;
-  height: 100%;
+  flex: 1;
   min-height: 0;
   overflow: hidden;
 }
@@ -30,3 +30,37 @@
 /* Accent override */
 .tori-content .section-title { color: var(--accent4); }
 .tori-content .reminder-dot  { background: var(--accent4); }
+
+/* ── Mobile ── */
+@media (max-width: 640px) {
+  .tori-content {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    grid-template-areas:
+      "thisweek"
+      "pb"
+      "hype"
+      "nextup"
+      "reminders"
+      "schedule"
+      "todo"
+      "events";
+    flex: none;
+    height: auto;
+    overflow: visible;
+    gap: 8px;
+  }
+
+  .ta-thisweek, .ta-pb, .ta-nextup,
+  .ta-reminders, .ta-schedule, .ta-todo, .ta-events {
+    min-height: 140px;
+    overflow: visible;
+  }
+
+  /* hype quote — 1 line taller than the 3-item minimum */
+  .ta-hype { min-height: 140px; overflow: visible; }
+
+  /* panels fill their wrapper so whitespace is inside the border, not outside */
+  .tori-content .panel,
+  .tori-content .hype-panel { flex: 1; }
+}

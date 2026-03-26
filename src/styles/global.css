@@ -20,8 +20,9 @@ body {
 .main-content {
   min-height: 0;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: 1fr;
+  padding: 6px 0 8px;
 }
 
 /* ── SUBTLE SCROLLBARS (global) ── */
@@ -409,28 +410,36 @@ button {
 
 .meal-item {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
   padding: 5px 0;
   border-bottom: 1px solid var(--border);
-  gap: 2px;
-  cursor: pointer;
+  min-width: 0;
 }
 .meal-item:last-child { border-bottom: none; }
 
 .meal-item-day {
-  font-size: 0.65rem;
+  font-size: 0.62rem;
   color: var(--muted);
   text-transform: uppercase;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+  flex-shrink: 0;
+  width: 42px;         /* fixed width — fits Mon–Sun + Prep */
 }
 
 .meal-item-name {
+  flex: 1;
   font-size: 0.82rem;
   color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  min-width: 0;
+  cursor: pointer;
 }
+.meal-item-name:hover { color: var(--accent2); }
 .meal-item-name.empty { color: var(--muted); font-style: italic; }
 
 .meal-edit-row {
@@ -953,3 +962,24 @@ button {
   line-height: 1;
 }
 .overlay-close:hover { color: var(--text); }
+
+/* ══════════════════════════════════════════
+   MOBILE — stack everything vertically
+   ══════════════════════════════════════════ */
+@media (max-width: 640px) {
+  body {
+    height: auto;
+    min-height: 100dvh;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-bottom: calc(var(--nav-h) + 20px);
+  }
+
+  .main-content {
+    height: auto;
+    min-height: 0;
+    overflow: visible;
+    grid-template-rows: auto;
+    padding: 0;
+  }
+}

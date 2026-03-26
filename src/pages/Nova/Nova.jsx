@@ -1,9 +1,43 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Component } from 'react'
 import Panel, { PanelHeader } from '../../components/Panel/Panel'
 import { SCRIPTS, apiFetch } from '../../api/scripts'
 import { getDayDiff, formatDateShort, formatReminderDate } from '../Home/homeUtils'
 import { NOVA_HYPE, NOVA_JOKES, NOVA_FACTS, NOVA_COOL_FACTS, pickDailyIndex } from '../../data/hypeContent'
 import './Nova.css'
+
+// ── Normalize API response → array ───────────────────────────
+function toArr(d) {
+  if (Array.isArray(d)) return d
+  if (d && Array.isArray(d.result)) return d.result
+  if (d && Array.isArray(d.items))  return d.items
+  if (d && Array.isArray(d.data))   return d.data
+  return []
+}
+
+// ── Error boundary ────────────────────────────────────────────
+class NovaErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(e) { return { error: e } }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: '20px', color: 'var(--muted)', fontSize: '0.85rem' }}>
+          <div style={{ color: '#e07070', marginBottom: 8 }}>⚠ Nova page crashed</div>
+          <div style={{ fontFamily: 'monospace', fontSize: '0.75rem', wordBreak: 'break-all' }}>
+            {this.state.error?.message}
+          </div>
+          <button
+            style={{ marginTop: 12, padding: '4px 12px', background: 'var(--surface2)',
+              border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)',
+              cursor: 'pointer', fontSize: '0.8rem' }}
+            onClick={() => this.setState({ error: null })}
+          >Retry</button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 // ── helpers ──────────────────────────────────────────────────
 function choreBadgeCls(dateStr) {
@@ -34,6 +68,7 @@ export default function Nova() {
   }, [])
 
   return (
+    <NovaErrorBoundary>
     <div className="nova-content">
       {/* Row 1: This Week + Hype */}
       <div className="nova-row-1">
@@ -57,6 +92,7 @@ export default function Nova() {
         <div className="na-cell"><HomeworkPanel /></div>
       </div>
     </div>
+    </NovaErrorBoundary>
   )
 }
 
@@ -212,7 +248,7 @@ function EventsPanel() {
     try {
       const res  = await apiFetch(`${SCRIPTS.NOVA}?type=events`)
       const data = await res.json()
-      setEvents((data || []).sort((a, b) => getDayDiff(a.date) - getDayDiff(b.date)))
+      setEvents(toArr(data).sort((a, b) => getDayDiff(a.date) - getDayDiff(b.date)))
     } catch (e) { console.error('nova events', e) }
     finally { setLoading(false) }
   }, [])
@@ -303,7 +339,7 @@ function RemindersPanel() {
     try {
       const res  = await apiFetch(`${SCRIPTS.NOVA}?type=reminders`)
       const data = await res.json()
-      setReminders(data || [])
+      setReminders(toArr(data))
     } catch (e) { console.error('nova reminders', e) }
     finally { setLoading(false) }
   }, [])
@@ -393,7 +429,7 @@ function ChoresPanel() {
     try {
       const res  = await apiFetch(`${SCRIPTS.CHORES}?type=chores`)
       const data = await res.json()
-      const filtered = (data || [])
+      const filtered = toArr(data)
         .filter(c => c.who === 'nova')
         .sort((a, b) => {
           const da = getDayDiff(a.dueDate), db = getDayDiff(b.dueDate)
@@ -409,14 +445,14 @@ function ChoresPanel() {
 
   useEffect(() => { load() }, [load])
 
-  async function toggle(idx, done) {
-    const updated = chores.map((c, i) => i === idx ? { ...c, done: !done } : c)
+  async function toggle(id, done) {
+    const updated = chores.map(c => c.id === id ? { ...c, done: !done } : c)
     setChores(updated)
     try {
       const fd = new FormData()
       fd.append('action', 'toggle')
       fd.append('type', 'chores')
-      fd.append('idx', String(idx))
+      fd.append('idx', String(id))
       fd.append('done', String(!done))
       await apiFetch(SCRIPTS.CHORES, { method: 'POST', body: fd })
     } catch (e) { console.error('toggle', e); setChores(chores) }
@@ -434,7 +470,7 @@ function ChoresPanel() {
                 const badge = c.dueDate ? choreBadgeCls(c.dueDate) : null
                 return (
                   <div key={c.id ?? i} className="chore-item">
-                    <input type="checkbox" checked={!!c.done} onChange={() => toggle(i, !!c.done)} />
+                    <input type="checkbox" checked={!!c.done} onChange={() => toggle(c.id, !!c.done)} />
                     <span className={`chore-item-name${c.done ? ' done' : ''}`}>{c.name}</span>
                     {badge && <span className={`countdown-badge ${badge}`}>{formatDateShort(c.dueDate)}</span>}
                   </div>
@@ -458,7 +494,7 @@ function HomeworkPanel() {
     try {
       const res  = await apiFetch(`${SCRIPTS.NOVA}?type=homework`)
       const data = await res.json()
-      setHw(data || [])
+      setHw(toArr(data))
     } catch (e) { console.error('homework load', e) }
     finally { setLoading(false) }
   }, [])
