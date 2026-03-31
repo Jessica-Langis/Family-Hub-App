@@ -2,9 +2,10 @@
 .parentals-grid {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr;
   grid-template-areas: "todo meals agenda";
   gap: 8px;
-  height: 100%;
+  height: auto;
   min-height: 0;
   overflow: hidden;
 }

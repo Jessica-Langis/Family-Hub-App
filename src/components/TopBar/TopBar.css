@@ -8,6 +8,7 @@
   padding: 10px 20px;
   min-width: 0;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 .topbar-title {
