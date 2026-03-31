@@ -15,7 +15,7 @@ import react from '@vitejs/plugin-react'
 //     background_color: '#0f1117',
 //     display: 'standalone',
 //     orientation: 'portrait',
-//     start_url: '/Family-Hub-App/',
+//     start_url: '/Family-Hub/',
 //     icons: [
 //       { src: 'icon-192.png', sizes: '192x192', type: 'image/png' },
 //       { src: 'icon-512.png', sizes: '512x512', type: 'image/png' }
@@ -24,7 +24,7 @@ import react from '@vitejs/plugin-react'
 // })
 
 export default defineConfig({
-  base: '/Family-Hub-App/',
+  base: '/Family-Hub/',
   plugins: [
     react(),
   ]
