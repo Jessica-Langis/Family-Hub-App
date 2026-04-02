@@ -54,7 +54,11 @@ export default function TodayPanel() {
   useEffect(() => {
     apiFetch(SCRIPTS.CHORES + '?type=chores')
       .then(r => r.json())
-      .then(items => setChores(items || []))
+      .then(data => {
+        const items = Array.isArray(data) ? data
+          : (data?.result || data?.items || data?.data || [])
+        setChores(items)
+      })
       .catch(() => {})
   }, [])
 
