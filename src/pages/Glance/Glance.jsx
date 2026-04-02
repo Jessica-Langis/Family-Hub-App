@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, Component } from 'react'
 import Panel, { PanelHeader } from '../../components/Panel/Panel'
 import { SCRIPTS, apiFetch } from '../../api/scripts'
-import { getDayDiff, getNextUSHoliday, countdownBadge } from '../Home/homeUtils'
+import { getDayDiff, getNextUSHolidays, countdownBadge } from '../Home/homeUtils'
 import './Glance.css'
 
 // ── helpers ───────────────────────────────────────────────────
@@ -95,117 +95,122 @@ export default function Glance() {
   )
 }
 
+// ── Event card sub-components ─────────────────────────────────
+function EmptyCard({ variant }) {
+  return (
+    <div className={`glance-ev-card glance-ev-card--${variant} glance-ev-card--empty`}>
+      <span className="glance-ev-card-empty-text">None</span>
+    </div>
+  )
+}
+
+function CalCard({ day }) {
+  if (!day) return <EmptyCard variant="cal" />
+  const diff = getDayDiff(day.date)
+  const b    = countdownBadge(diff)
+  const evts = (day.events || []).slice(0, 3)
+  return (
+    <div className="glance-ev-card glance-ev-card--cal">
+      <div className="glance-ev-card-top">
+        <span className="glance-ev-card-date">{fmtDate(day.date)}</span>
+        {b.text && <span className={`countdown-badge ${b.cls}`}>{b.text}</span>}
+      </div>
+      <div className="glance-ev-card-events">
+        {evts.map((ev, i) => {
+          const name    = evSummary(ev)
+          const isAllDay = ev.isAllDay !== false
+          return (
+            <div key={i} className="glance-ev-card-row">
+              <span className="glance-ev-card-name">{name}</span>
+              {!isAllDay && ev.startTime && (
+                <span className="glance-ev-card-time">{ev.startTime}</span>
+              )}
+            </div>
+          )
+        })}
+        {(day.events || []).length > 3 && (
+          <div className="glance-ev-card-more">+{day.events.length - 3} more</div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function WrestleCard({ ev }) {
+  if (!ev) return <EmptyCard variant="wrestle" />
+  const b = countdownBadge(getDayDiff(ev.date))
+  return (
+    <div className="glance-ev-card glance-ev-card--wrestle">
+      <div className="glance-ev-card-top">
+        <span className="glance-ev-card-date">{fmtDate(ev.date)}</span>
+        {b.text && <span className={`countdown-badge ${b.cls}`}>{b.text}</span>}
+      </div>
+      <div className="glance-ev-card-name">{ev.name}</div>
+      {ev.type && <div className="glance-ev-card-type">{ev.type}</div>}
+      {ev.location && <div className="glance-ev-card-loc">📍 {ev.location}</div>}
+    </div>
+  )
+}
+
+function HolidayCard({ holiday }) {
+  if (!holiday) return <EmptyCard variant="holiday" />
+  const b = countdownBadge(getDayDiff(holiday.date))
+  return (
+    <div className="glance-ev-card glance-ev-card--holiday">
+      <div className="glance-ev-card-top">
+        <span className="glance-ev-card-date">{fmtDate(dateParts(holiday.date))}</span>
+        {b.text && <span className={`countdown-badge ${b.cls}`}>{b.text}</span>}
+      </div>
+      <div className="glance-ev-card-name">{holiday.name}</div>
+    </div>
+  )
+}
+
 // ── Events panel ──────────────────────────────────────────────
 function EventsPanel({ calDays, wrestling }) {
   const today    = new Date(); today.setHours(0,0,0,0)
   const todayStr = dateParts(today)
 
-  // ── Section 1: Next Event (calendar + holiday only) ──
-  const holiday    = getNextUSHoliday()
-  const holidayStr = holiday ? dateParts(holiday.date) : null
+  // Next 2 calendar days with events
+  const calWithEvents = calDays
+    .filter(d => d.date >= todayStr && d.events?.length > 0)
+    .sort((a, b) => a.date.localeCompare(b.date))
+    .slice(0, 2)
 
-  // Map calendar events by date for fast lookup
-  const calByDate = {}
-  calDays.forEach(day => {
-    if (day.date >= todayStr && day.events?.length) calByDate[day.date] = day.events
-  })
-
-  // Find soonest date
-  const calDates = Object.keys(calByDate).sort()
-  let soonestDate = calDates[0] || null
-  if (holidayStr) {
-    if (!soonestDate || holidayStr < soonestDate) soonestDate = holidayStr
-  }
-
-  // Build combined event list for soonest date
-  let nextEvents = []
-  if (soonestDate) {
-    const calEvts = calByDate[soonestDate] || []
-    calEvts.forEach(ev => {
-      const isAllDay = ev.isAllDay !== false
-      nextEvents.push({
-        name:     evSummary(ev),
-        isAllDay,
-        time:     !isAllDay ? (ev.startTime || null) : null,
-      })
-    })
-    if (holidayStr === soonestDate) {
-      nextEvents.push({ name: holiday.name, isAllDay: true, time: null })
-    }
-    // Sort: all-day first, then A-Z
-    nextEvents.sort((a, b) => {
-      if (a.isAllDay !== b.isAllDay) return a.isAllDay ? -1 : 1
-      return a.name.localeCompare(b.name)
-    })
-  }
-
-  // ── Section 2: Wrestling events (next 2) ──
-  const upcomingWrestle = toArr(wrestling)
+  // Next 2 wrestling events
+  const wrestleEvents = toArr(wrestling)
     .filter(e => e.date && getDayDiff(e.date) >= 0)
     .sort((a, b) => new Date(a.date) - new Date(b.date))
     .slice(0, 2)
+
+  // Next 2 holidays
+  const holidays = getNextUSHolidays(2)
 
   return (
     <Panel className="glance-events-panel">
       <PanelHeader title={<span style={{ color: 'var(--accent6)' }}>Events</span>} />
 
       <div className="glance-events-body">
-        {/* ── Next Event ── */}
-        <div className="glance-section-label">Next Up</div>
+        {/* ── Row label: Calendar ── */}
+        <div className="glance-section-label">Calendar</div>
+        <div className="glance-card-row">
+          <CalCard day={calWithEvents[0] ?? null} />
+          <CalCard day={calWithEvents[1] ?? null} />
+        </div>
 
-        {soonestDate ? (
-          <div className="glance-next-event">
-            <div className="glance-next-date-row">
-              <span className="glance-next-date">{fmtDate(soonestDate)}</span>
-              {(() => {
-                const b = countdownBadge(getDayDiff(soonestDate))
-                return b.text ? <span className={`countdown-badge ${b.cls}`}>{b.text}</span> : null
-              })()}
-            </div>
-            <div className="glance-event-list">
-              {nextEvents.map((ev, i) => (
-                <div key={i} className={`glance-event-row${ev.isAllDay ? ' allday' : ''}`}>
-                  <span className="glance-event-dot" />
-                  <span className="glance-event-name">{ev.name}</span>
-                  {ev.time
-                    ? <span className="glance-event-time">{ev.time}</span>
-                    : <span className="glance-allday-tag">All Day</span>
-                  }
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div className="glance-empty">Nothing coming up</div>
-        )}
-
-        <div className="glance-divider" />
-
-        {/* ── Tori's Wrestling Events ── */}
+        {/* ── Row label: Wrestling ── */}
         <div className="glance-section-label" style={{ color: 'var(--accent4)' }}>Tori's Events</div>
+        <div className="glance-card-row">
+          <WrestleCard ev={wrestleEvents[0] ?? null} />
+          <WrestleCard ev={wrestleEvents[1] ?? null} />
+        </div>
 
-        {upcomingWrestle.length === 0 ? (
-          <div className="glance-empty">No events scheduled</div>
-        ) : (
-          <div className="glance-wrestle-list">
-            {upcomingWrestle.map((ev, i) => {
-              const b = countdownBadge(getDayDiff(ev.date))
-              return (
-                <div key={ev.id ?? i} className={`glance-wrestle-item${i === 0 ? ' primary' : ' secondary'}`}>
-                  <div className="glance-wrestle-top">
-                    <span className="glance-wrestle-name">{ev.name}</span>
-                    {b.text && <span className={`countdown-badge ${b.cls}`}>{b.text}</span>}
-                  </div>
-                  {ev.type && <div className="glance-wrestle-type">{ev.type}</div>}
-                  <div className="glance-wrestle-meta">
-                    <span className="glance-wrestle-date">{fmtDate(ev.date)}</span>
-                    {ev.location && <span className="glance-wrestle-loc">📍 {ev.location}</span>}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        {/* ── Row label: Holidays ── */}
+        <div className="glance-section-label" style={{ color: 'var(--accent2)' }}>Holidays</div>
+        <div className="glance-card-row">
+          <HolidayCard holiday={holidays[0] ?? null} />
+          <HolidayCard holiday={holidays[1] ?? null} />
+        </div>
       </div>
     </Panel>
   )

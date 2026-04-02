@@ -90,3 +90,20 @@ export function getNextUSHoliday() {
   candidates.sort((a, b) => a.date - b.date)
   return candidates[0] || null
 }
+
+export function getNextUSHolidays(n = 2) {
+  const today = new Date(); today.setHours(0,0,0,0)
+  const year = today.getFullYear()
+  const candidates = []
+  ;[year, year + 1].forEach(y => {
+    US_HOLIDAYS.forEach(h => {
+      let d
+      if (h.day)       d = new Date(y, h.month - 1, h.day)
+      else if (h.last) d = getLastWeekday(y, h.month, h.weekday)
+      else             d = getNthWeekday(y, h.month, h.nth, h.weekday)
+      if (d >= today) candidates.push({ name: h.name, date: d })
+    })
+  })
+  candidates.sort((a, b) => a.date - b.date)
+  return candidates.slice(0, n)
+}
