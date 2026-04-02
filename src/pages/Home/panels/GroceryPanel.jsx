@@ -23,7 +23,9 @@ export default function GroceryPanel() {
     try {
       const res  = await apiFetch(SCRIPTS.GROCERY)
       const data = await res.json()
-      setItems(data || [])
+      const list = Array.isArray(data) ? data
+        : (data?.items || data?.result || data?.data || [])
+      setItems(list)
       setStatus('ok')
     } catch {
       setStatus('error')
