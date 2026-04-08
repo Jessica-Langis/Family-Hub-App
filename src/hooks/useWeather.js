@@ -1,60 +1,110 @@
 import { useState, useEffect } from 'react'
-import { apiFetch, WEATHER_CONFIG } from '../api/scripts'
+import { WEATHER_CONFIG } from '../api/scripts'
 
-const WEATHER_ICONS = {
-  0:'☀️',  1:'🌤️',  2:'⛅',  3:'☁️',
-  45:'🌫️', 48:'🌫️',
-  51:'🌦️', 53:'🌦️', 55:'🌧️',
-  61:'🌧️', 63:'🌧️', 65:'🌧️',
-  71:'🌨️', 73:'🌨️', 75:'❄️',
-  80:'🌦️', 81:'🌧️', 82:'🌧️',
-  95:'⛈️', 99:'⛈️',
+const NWS_HEADERS = { 'User-Agent': 'FamilyHubApp (family-hub)' }
+const DAY_LABELS  = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+
+function nwsToIcon(shortForecast) {
+  if (!shortForecast) return '🌡️'
+  const f = shortForecast.toLowerCase()
+  if (f.includes('thunderstorm') || f.includes('thunder'))              return '⛈️'
+  if (f.includes('blizzard')     || f.includes('heavy snow'))           return '❄️'
+  if (f.includes('snow shower')  || f.includes('snow and'))             return '🌨️'
+  if (f.includes('snow'))                                                return '🌨️'
+  if (f.includes('freezing')     || f.includes('sleet') || f.includes('wintry')) return '🌧️'
+  if (f.includes('heavy rain')   || f.includes('rain shower'))          return '🌧️'
+  if (f.includes('showers')      || f.includes('rain'))                 return '🌧️'
+  if (f.includes('drizzle'))                                             return '🌦️'
+  if (f.includes('fog')          || f.includes('haze') || f.includes('smoke')) return '🌫️'
+  if (f.includes('windy')        || f.includes('breezy'))               return '💨'
+  if (f.includes('mostly cloudy') || f.includes('partly cloudy'))       return '⛅'
+  if (f.includes('overcast')     || f.includes('cloudy'))               return '☁️'
+  if (f.includes('mostly sunny') || f.includes('partly sunny'))         return '🌤️'
+  if (f.includes('sunny')        || f.includes('clear'))                return '☀️'
+  return '🌡️'
 }
-
-const WEATHER_CONDITIONS = {
-  0:'Clear',        1:'Mostly Clear', 2:'Partly Cloudy', 3:'Overcast',
-  45:'Foggy',       48:'Foggy',
-  51:'Lt Drizzle',  53:'Drizzle',     55:'Hvy Drizzle',
-  61:'Lt Rain',     63:'Rain',        65:'Hvy Rain',
-  71:'Lt Snow',     73:'Snow',        75:'Hvy Snow',
-  80:'Showers',     81:'Showers',     82:'Hvy Showers',
-  95:'Thunderstorm',99:'Hvy Storm',
-}
-
-const DAY_LABELS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
 export function useWeather() {
-  const [days, setDays]       = useState([])
+  const [days,    setDays]    = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError]     = useState(null)
+  const [error,   setError]   = useState(null)
 
   useEffect(() => {
     async function load() {
       try {
-        const { lat, lon, timezone } = WEATHER_CONFIG
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weathercode,temperature_2m_max,temperature_2m_min&temperature_unit=fahrenheit&timezone=${encodeURIComponent(timezone)}&forecast_days=5`
-        const res  = await apiFetch(url)
-        const data = await res.json()
-        const isMobile = window.innerWidth <= 768
-        const count = isMobile ? 3 : 5
+        const { lat, lon } = WEATHER_CONFIG
 
-        const parsed = data.daily.time.slice(0, count).map((t, i) => {
-          const d    = new Date(t + 'T12:00:00')
-          const code = data.daily.weathercode[i]
-          return {
-            name:      i === 0 ? 'Today' : DAY_LABELS[d.getDay()],
-            icon:      WEATHER_ICONS[code]      ?? '🌡️',
-            temp:      `${Math.round(data.daily.temperature_2m_max[i])}° / ${Math.round(data.daily.temperature_2m_min[i])}°`,
-            condition: WEATHER_CONDITIONS[code] ?? 'Mixed',
+        // Step 1 — resolve the NWS grid for this lat/lon
+        const pointsRes  = await fetch(
+          `https://api.weather.gov/points/${lat},${lon}`,
+          { headers: NWS_HEADERS }
+        )
+        if (!pointsRes.ok) throw new Error(`NWS points ${pointsRes.status}`)
+        const pointsData = await pointsRes.json()
+        const forecastUrl = pointsData.properties?.forecast
+        if (!forecastUrl) throw new Error('No forecast URL from NWS')
+
+        // Step 2 — fetch the daily forecast periods
+        const fxRes  = await fetch(forecastUrl, { headers: NWS_HEADERS })
+        if (!fxRes.ok) throw new Error(`NWS forecast ${fxRes.status}`)
+        const fxData = await fxRes.json()
+        const periods = fxData.properties?.periods
+        if (!periods?.length) throw new Error('No forecast periods')
+
+        // Build date → { high, low, icon, condition } from periods
+        // NWS splits into daytime (high) and nighttime (low) half-day periods
+        const byDate = new Map()
+        for (const p of periods) {
+          const dateStr = p.startTime.slice(0, 10)
+          if (!byDate.has(dateStr)) byDate.set(dateStr, {})
+          const entry = byDate.get(dateStr)
+          if (p.isDaytime) {
+            entry.high      = p.temperature
+            entry.icon      = nwsToIcon(p.shortForecast)
+            entry.condition = p.shortForecast
+          } else {
+            entry.low = p.temperature
+            // If today's first period is overnight (afternoon already passed),
+            // use night period for icon fallback
+            if (entry.icon == null) {
+              entry.icon      = nwsToIcon(p.shortForecast)
+              entry.condition = p.shortForecast
+            }
           }
-        })
-        setDays(parsed)
+        }
+
+        const isMobile = window.innerWidth <= 768
+        const count    = isMobile ? 3 : 5
+        const today    = new Date(); today.setHours(0, 0, 0, 0)
+
+        const result = []
+        for (let i = 0; result.length < count && i < 8; i++) {
+          const d       = new Date(today)
+          d.setDate(d.getDate() + i)
+          const dateStr = d.toISOString().slice(0, 10)
+          const entry   = byDate.get(dateStr)
+          if (!entry) continue
+
+          const hi   = entry.high != null ? `${entry.high}°` : '—'
+          const lo   = entry.low  != null ? `${entry.low}°`  : '—'
+          const temp = `${hi} / ${lo}`
+
+          result.push({
+            name:      i === 0 ? 'Today' : DAY_LABELS[d.getDay()],
+            icon:      entry.icon      ?? '🌡️',
+            temp,
+            condition: entry.condition ?? '',
+          })
+        }
+
+        setDays(result)
       } catch (e) {
         setError(e.message)
       } finally {
         setLoading(false)
       }
     }
+
     load()
   }, [])
 

@@ -59,6 +59,88 @@ function getCountdown(dateStr, timeStr) {
   return { days: Math.max(0, days), hours: null, hasTime: false }
 }
 
+// ── Weather icon (NWS api.weather.gov — no API key, same data as Google) ──
+// Maps NWS shortForecast text to an emoji
+function nwsForecastToEmoji(shortForecast) {
+  if (!shortForecast) return null
+  const f = shortForecast.toLowerCase()
+  if (f.includes('thunderstorm') || f.includes('thunder'))       return '⛈️'
+  if (f.includes('blizzard') || f.includes('heavy snow'))        return '❄️'
+  if (f.includes('snow shower') || f.includes('snow and'))       return '🌨️'
+  if (f.includes('snow'))                                         return '🌨️'
+  if (f.includes('freezing rain') || f.includes('sleet') || f.includes('wintry mix')) return '🌧️'
+  if (f.includes('heavy rain') || f.includes('rain shower'))     return '🌧️'
+  if (f.includes('showers') || f.includes('rain'))               return '🌧️'
+  if (f.includes('drizzle'))                                      return '🌦️'
+  if (f.includes('fog') || f.includes('haze') || f.includes('smoke')) return '🌫️'
+  if (f.includes('windy') || f.includes('breezy'))               return '💨'
+  if (f.includes('overcast') || f.includes('cloudy'))            return '☁️'
+  if (f.includes('mostly cloudy') || f.includes('partly cloudy')) return '⛅'
+  if (f.includes('mostly sunny') || f.includes('partly sunny'))  return '🌤️'
+  if (f.includes('sunny') || f.includes('clear'))                return '☀️'
+  return null
+}
+
+// Module-level cache so we don't re-fetch across re-renders
+const _weatherCache = new Map()
+
+function useWeatherIcon(location, dateStr) {
+  const [icon, setIcon] = useState(null)
+
+  useEffect(() => {
+    if (!location || !dateStr) return
+    // NWS forecast window is ~7 days; fall back gracefully outside that
+    const target  = new Date(dateStr + 'T00:00:00')
+    const todayMs = (() => { const t = new Date(); t.setHours(0,0,0,0); return t })()
+    const diff    = Math.round((target - todayMs) / 86400000)
+    if (diff < 0 || diff > 7) return
+
+    const key = `${location}|${dateStr}`
+    if (_weatherCache.has(key)) { setIcon(_weatherCache.get(key)); return }
+
+    async function load() {
+      try {
+        // Step 1 — geocode via Open-Meteo (still free/keyless, just for lat/lng)
+        const cityName = location.split(',')[0].trim()
+        const geoRes   = await fetch(
+          `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(cityName)}&count=1&language=en&format=json`
+        )
+        const geoData  = await geoRes.json()
+        if (!geoData.results?.length) return
+        const { latitude, longitude } = geoData.results[0]
+
+        // Step 2 — NWS points endpoint → get forecast office + gridpoint
+        const pointsRes  = await fetch(
+          `https://api.weather.gov/points/${latitude.toFixed(4)},${longitude.toFixed(4)}`,
+          { headers: { 'User-Agent': 'FamilyHubApp (family-hub)' } }
+        )
+        const pointsData = await pointsRes.json()
+        const forecastUrl = pointsData.properties?.forecast
+        if (!forecastUrl) return
+
+        // Step 3 — fetch the daily forecast periods
+        const fxRes  = await fetch(forecastUrl, { headers: { 'User-Agent': 'FamilyHubApp (family-hub)' } })
+        const fxData = await fxRes.json()
+        const periods = fxData.properties?.periods
+        if (!periods?.length) return
+
+        // Find the daytime period matching our target date
+        const match = periods.find(p => {
+          const pDate = p.startTime?.slice(0, 10)
+          return pDate === dateStr && p.isDaytime !== false
+        }) || periods.find(p => p.startTime?.slice(0, 10) === dateStr)
+
+        if (!match) return
+        const emoji = nwsForecastToEmoji(match.shortForecast)
+        if (emoji) { _weatherCache.set(key, emoji); setIcon(emoji) }
+      } catch { /* silently fall back to pin icon */ }
+    }
+    load()
+  }, [location, dateStr])
+
+  return icon   // null until resolved
+}
+
 // ── Error Boundary ────────────────────────────────────────────
 class GlanceErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: null } }
@@ -164,15 +246,21 @@ function AutoSizeTitle({ text, color }) {
 
 // ── 4-row event block ─────────────────────────────────────────
 function EventBlock({ name, dateStr, timeStr, location, accentColor }) {
-  const ds = toDateStr(dateStr)
-  const cd = getCountdown(ds, timeStr)
+  const ds          = toDateStr(dateStr)
+  const cd          = getCountdown(ds, timeStr)
+  const weatherIcon = useWeatherIcon(location, ds)
+
   return (
     <div className="glance-ev-block">
       <AutoSizeTitle text={name} color={accentColor} />
       <div className="glance-ev-block-date">
         {fmtFull(dateStr)}{timeStr ? ` · ${timeStr}` : ''}
       </div>
-      {location && <div className="glance-ev-block-loc">📍 {location}</div>}
+      {location && (
+        <div className="glance-ev-block-loc">
+          {weatherIcon ?? '📍'} {location}
+        </div>
+      )}
       <div className="glance-ev-block-countdown">
         {/* < 24 h away with a known time → show hours only, never "TODAY Xh" */}
         {cd.hasTime && cd.days === 0
