@@ -129,20 +129,36 @@ export default function Glance() {
 }
 
 // ── Auto-sizing title — binary-searches for largest fitting font ──
+// Uses ResizeObserver so it re-measures on any container width change
+// (e.g., different screen sizes, flex layout settling after data loads)
 function AutoSizeTitle({ text, color }) {
   const ref = useRef(null)
-  useLayoutEffect(() => {
+
+  const measure = useCallback(() => {
     const el = ref.current
-    if (!el) return
-    let lo = 0.55, hi = 2.8
-    for (let i = 0; i < 18; i++) {
+    if (!el || el.clientWidth === 0) return
+    let lo = 0.4, hi = 2.0
+    for (let i = 0; i < 22; i++) {
       const mid = (lo + hi) / 2
       el.style.fontSize = `${mid}rem`
       if (el.scrollWidth <= el.clientWidth) lo = mid
       else hi = mid
     }
-    el.style.fontSize = `${(lo * 0.96).toFixed(3)}rem`
-  }, [text])
+    el.style.fontSize = `${(lo * 0.95).toFixed(3)}rem`
+  }, [])
+
+  useLayoutEffect(() => {
+    measure()
+  }, [text, measure])
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const ro = new ResizeObserver(() => measure())
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [measure])
+
   return <div ref={ref} className="glance-ev-title" style={{ color }}>{text}</div>
 }
 
@@ -158,12 +174,21 @@ function EventBlock({ name, dateStr, timeStr, location, accentColor }) {
       </div>
       {location && <div className="glance-ev-block-loc">📍 {location}</div>}
       <div className="glance-ev-block-countdown">
-        <span className="glance-ev-cd-days" style={{ color: accentColor }}>
-          {cd.days === 0 ? 'TODAY' : `${cd.days} ${cd.days === 1 ? 'day' : 'days'}`}
-        </span>
-        {cd.hasTime && cd.hours != null && (
-          <span className="glance-ev-cd-hours" style={{ color: accentColor, opacity: 0.65 }}>{cd.hours}h</span>
-        )}
+        {/* < 24 h away with a known time → show hours only, never "TODAY Xh" */}
+        {cd.hasTime && cd.days === 0
+          ? <span className="glance-ev-cd-days" style={{ color: accentColor }}>
+              {cd.hours === 0 ? 'NOW' : `${cd.hours}h`}
+            </span>
+          : <>
+              <span className="glance-ev-cd-days" style={{ color: accentColor }}>
+                {cd.days === 0 ? 'TODAY' : `${cd.days} ${cd.days === 1 ? 'day' : 'days'}`}
+              </span>
+              {/* Show hours alongside days only when 1+ days out and time is known */}
+              {cd.hasTime && cd.days > 0 && cd.hours != null && (
+                <span className="glance-ev-cd-hours" style={{ color: accentColor, opacity: 0.65 }}>{cd.hours}h</span>
+              )}
+            </>
+        }
       </div>
     </div>
   )

@@ -96,7 +96,7 @@
   align-items: center;
   justify-content: center;
   gap: 0;
-  padding: 12px 16px;
+  padding: 8px 12px;
   min-width: 0;
   overflow: hidden;
 }
@@ -120,10 +120,10 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
-/* Row 1 — dynamic title, fills width exactly */
+/* Row 1 — dynamic title (font set via JS binary search, capped lower) */
 .glance-ev-title {
   white-space: nowrap;
   overflow: hidden;
@@ -134,9 +134,9 @@
   flex-shrink: 0;
 }
 
-/* Row 2 — date + time */
+/* Row 2 — date + time: scales with container, smaller ceiling */
 .glance-ev-block-date {
-  font-size: clamp(1rem, 5cqi, 1.5rem);
+  font-size: clamp(0.68rem, 3.5cqi, 1.05rem);
   color: var(--text);
   font-weight: 600;
   text-align: center;
@@ -146,7 +146,7 @@
 
 /* Row 3 — location */
 .glance-ev-block-loc {
-  font-size: clamp(0.65rem, 3cqi, 0.95rem);
+  font-size: clamp(0.58rem, 2.5cqi, 0.82rem);
   color: var(--muted);
   text-align: center;
   line-height: 1.2;
@@ -157,24 +157,24 @@
   max-width: 100%;
 }
 
-/* Row 4 — countdown */
+/* Row 4 — countdown: bigger than date but scales faster so it stays proportional */
 .glance-ev-block-countdown {
   display: flex;
   align-items: baseline;
-  gap: 10px;
+  gap: 8px;
   justify-content: center;
   flex-shrink: 0;
   margin-top: 2px;
 }
 
 .glance-ev-cd-days {
-  font-size: clamp(1.3rem, 7cqi, 2.4rem);
+  font-size: clamp(1rem, 5.5cqi, 1.7rem);
   font-weight: 700;
   line-height: 1;
 }
 
 .glance-ev-cd-hours {
-  font-size: clamp(1rem, 5cqi, 1.6rem);
+  font-size: clamp(0.78rem, 4cqi, 1.2rem);
   font-weight: 500;
   line-height: 1;
 }
