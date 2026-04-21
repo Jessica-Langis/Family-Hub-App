@@ -19,7 +19,7 @@ const PAGES = {
 
 const TAB_TITLES = {
   home:      'What Up Fam?',
-  fun:       '⛺ Fun',
+  fun:       '🛋️ Unwind',
   parentals: '👨‍👩‍👧‍👦 Parentals',
   tori:      'Tori',
   nova:      'Nova',

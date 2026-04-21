@@ -2,7 +2,7 @@ import './BottomNav.css'
 
 const TABS = [
   { id: 'home',      icon: '🏡',       label: 'Home'      },
-  { id: 'fun',       icon: '⛺',        label: 'Fun'       },
+  { id: 'fun',       icon: '🛋️',        label: 'Unwind'    },
   { id: 'parentals', icon: '👨‍👩‍👧‍👦', label: 'Parentals' },
   { id: 'tori',      icon: '🤼‍♀️',     label: 'Tori'      },
   { id: 'nova',      icon: '🚲',        label: 'Nova'      },

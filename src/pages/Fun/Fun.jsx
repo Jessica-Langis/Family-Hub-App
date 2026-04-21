@@ -62,26 +62,47 @@ function FunList({ items, status, titleKey, subKey, isMeals, onDelete }) {
 // ── Add modal ─────────────────────────────────────────────
 const FORM_CONFIG = {
   movies: {
-    title:  '🎬 We Need to Watch:',
+    title:  '🎬 Add to Watch List:',
     fields: [
       { id: 'title',     placeholder: 'e.g. Inception' },
       { id: 'mediaType', placeholder: 'Movie or Show' },
     ],
   },
   books: {
-    title:  '📚 Books to Check Out:',
+    title:  '📚 Add to Reading List:',
     fields: [
       { id: 'title',  placeholder: 'e.g. Atomic Habits' },
       { id: 'author', placeholder: 'e.g. James Clear' },
     ],
   },
   mealideas: {
-    title:  '🍽 I Want to Cook Something Fun:',
+    title:  '🍽 Add a Meal Idea:',
     fields: [
       { id: 'name',       placeholder: 'e.g. Chicken Tikka Masala' },
       { id: 'category',   placeholder: 'e.g. Dinner, Quick' },
       { id: 'ingredient', placeholder: 'e.g. Chicken' },
       { id: 'link',       placeholder: 'https://…' },
+    ],
+  },
+  weekendideas: {
+    title:  '🏕 Add a Weekend Idea:',
+    fields: [
+      { id: 'title',       placeholder: 'e.g. Hiking at Mt. Rainier' },
+      { id: 'description', placeholder: 'Notes (optional)' },
+    ],
+  },
+  placestogo: {
+    title:  '📍 Add a Place to Go:',
+    fields: [
+      { id: 'title',    placeholder: 'e.g. Pike Place Market' },
+      { id: 'location', placeholder: 'City or address (optional)' },
+    ],
+  },
+  localevents: {
+    title:  '🎉 Add a Local Event:',
+    fields: [
+      { id: 'title', placeholder: 'e.g. Farmers Market' },
+      { id: 'date',  placeholder: 'Date (optional)' },
     ],
   },
 }
@@ -138,23 +159,81 @@ function AddModal({ type, onClose, onAdded }) {
   )
 }
 
+// ── Read / Watch panel (col 1, full height) ───────────────
+function ReadWatchPanel({ movies, books, status, onDelete, onAdd }) {
+  const [tab, setTab] = useState('watch')
+  const isWatch = tab === 'watch'
+
+  return (
+    <Panel>
+      <PanelHeader
+        title={<span style={{ color: 'var(--accent5)' }}>{isWatch ? 'Watch List' : 'Reading List'}</span>}
+        actions={
+          <button
+            className="add-btn"
+            style={{ background: 'var(--accent5)', color: '#0f1117' }}
+            onClick={() => onAdd(isWatch ? 'movies' : 'books')}
+          >+</button>
+        }
+      />
+      <div className="fun-toggle">
+        <button className={`fun-toggle-btn ${isWatch ? 'active' : ''}`} onClick={() => setTab('watch')}>
+          🎬 Watch
+        </button>
+        <button className={`fun-toggle-btn ${!isWatch ? 'active' : ''}`} onClick={() => setTab('read')}>
+          📚 Read
+        </button>
+      </div>
+      {isWatch
+        ? <FunList items={movies} status={status.movies} titleKey="title" subKey="mediaType" onDelete={id => onDelete('movies', id)} />
+        : <FunList items={books}  status={status.books}  titleKey="title" subKey="author"    onDelete={id => onDelete('books',  id)} />
+      }
+    </Panel>
+  )
+}
+
+// ── Simple generic panel ──────────────────────────────────
+function SimplePanel({ title, color, type, items, status, onDelete, onAdd }) {
+  return (
+    <Panel>
+      <PanelHeader
+        title={<span style={{ color: color || 'var(--accent5)' }}>{title}</span>}
+        actions={
+          <button
+            className="add-btn"
+            style={{ background: color || 'var(--accent5)', color: '#0f1117' }}
+            onClick={() => onAdd(type)}
+          >+</button>
+        }
+      />
+      <FunList items={items} status={status} titleKey="title" subKey={type === 'localevents' ? 'date' : 'location'} onDelete={id => onDelete(type, id)} />
+    </Panel>
+  )
+}
+
 // ── Main page ─────────────────────────────────────────────
+const ALL_TYPES = ['movies', 'books', 'mealideas', 'weekendideas', 'placestogo', 'localevents']
+const TYPE_TO_KEY = { mealideas: 'meals', weekendideas: 'weekendideas', placestogo: 'placestogo', localevents: 'localevents' }
+
+function typeKey(type) { return TYPE_TO_KEY[type] || type }
+
 export default function Fun() {
-  const [movies, setMovies] = useState([])
-  const [books,  setBooks]  = useState([])
-  const [meals,  setMeals]  = useState([])
-  const [status, setStatus] = useState({ movies: 'loading', books: 'loading', meals: 'loading' })
-  const [modal,  setModal]  = useState(null)
+  const [data, setData] = useState({
+    movies: [], books: [], meals: [], weekendideas: [], placestogo: [], localevents: []
+  })
+  const [status, setStatus] = useState({
+    movies: 'loading', books: 'loading', meals: 'loading',
+    weekendideas: 'loading', placestogo: 'loading', localevents: 'loading'
+  })
+  const [modal, setModal] = useState(null)
 
   const load = useCallback(async (type) => {
-    const key = type === 'mealideas' ? 'meals' : type
+    const key = typeKey(type)
     setStatus(s => ({ ...s, [key]: 'loading' }))
     try {
       const res   = await apiFetch(SCRIPTS.CHORES + `?type=${type}`)
       const items = await res.json()
-      if (type === 'movies')    setMovies(items || [])
-      if (type === 'books')     setBooks(items  || [])
-      if (type === 'mealideas') setMeals(items  || [])
+      setData(d => ({ ...d, [key]: items || [] }))
       setStatus(s => ({ ...s, [key]: 'ok' }))
     } catch {
       setStatus(s => ({ ...s, [key]: 'error' }))
@@ -162,7 +241,7 @@ export default function Fun() {
   }, [])
 
   useEffect(() => {
-    load('movies'); load('books'); load('mealideas')
+    ALL_TYPES.forEach(t => load(t))
   }, [load])
 
   async function handleDelete(type, id) {
@@ -176,38 +255,58 @@ export default function Fun() {
 
   return (
     <div className="fun-content">
-      <Panel>
-        <PanelHeader
-          title={<span style={{ color: 'var(--accent5)' }}>Movies &amp; Shows</span>}
-          actions={
-            <button className="add-btn" style={{ background: 'var(--accent5)', color: '#0f1117' }}
-              onClick={() => setModal('movies')}>+</button>
-          }
-        />
-        <FunList items={movies} status={status.movies} titleKey="title" onDelete={id => handleDelete('movies', id)} />
-      </Panel>
 
-      <Panel>
-        <PanelHeader
-          title={<span style={{ color: 'var(--accent5)' }}>Books to Read</span>}
-          actions={
-            <button className="add-btn" style={{ background: 'var(--accent5)', color: '#0f1117' }}
-              onClick={() => setModal('books')}>+ Add</button>
-          }
+      {/* Col 1 — Read / Watch (spans both rows) */}
+      <div className="fun-col1">
+        <ReadWatchPanel
+          movies={data.movies}
+          books={data.books}
+          status={status}
+          onDelete={handleDelete}
+          onAdd={setModal}
         />
-        <FunList items={books} status={status.books} titleKey="title" subKey="author" onDelete={id => handleDelete('books', id)} />
-      </Panel>
+      </div>
 
-      <Panel>
-        <PanelHeader
-          title={<span style={{ color: 'var(--accent5)' }}>Meal Ideas</span>}
-          actions={
-            <button className="add-btn" style={{ background: 'var(--accent5)', color: '#0f1117' }}
-              onClick={() => setModal('mealideas')}>+ Add</button>
-          }
+      {/* Col 2 row 1 — Weekend Ideas */}
+      <div className="fun-col2-row1">
+        <SimplePanel
+          title="Weekend Ideas" color="var(--accent3)" type="weekendideas"
+          items={data.weekendideas} status={status.weekendideas}
+          onDelete={handleDelete} onAdd={setModal}
         />
-        <FunList items={meals} status={status.meals} isMeals onDelete={id => handleDelete('mealideas', id)} />
-      </Panel>
+      </div>
+
+      {/* Col 2 row 2 — Places to Go */}
+      <div className="fun-col2-row2">
+        <SimplePanel
+          title="Places to Go" color="var(--accent2)" type="placestogo"
+          items={data.placestogo} status={status.placestogo}
+          onDelete={handleDelete} onAdd={setModal}
+        />
+      </div>
+
+      {/* Col 3 row 1 — Meal Ideas */}
+      <div className="fun-col3-row1">
+        <Panel>
+          <PanelHeader
+            title={<span style={{ color: 'var(--accent5)' }}>Meal Ideas</span>}
+            actions={
+              <button className="add-btn" style={{ background: 'var(--accent5)', color: '#0f1117' }}
+                onClick={() => setModal('mealideas')}>+ Add</button>
+            }
+          />
+          <FunList items={data.meals} status={status.meals} isMeals onDelete={id => handleDelete('mealideas', id)} />
+        </Panel>
+      </div>
+
+      {/* Col 3 row 2 — Local Events */}
+      <div className="fun-col3-row2">
+        <SimplePanel
+          title="Local Events" color="var(--accent4)" type="localevents"
+          items={data.localevents} status={status.localevents}
+          onDelete={handleDelete} onAdd={setModal}
+        />
+      </div>
 
       {modal && (
         <AddModal
