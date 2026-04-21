@@ -192,6 +192,7 @@ button {
   flex-shrink: 0;
 }
 
+.reminder-edit,
 .reminder-delete {
   background: none;
   border: none;
@@ -203,6 +204,7 @@ button {
   flex-shrink: 0;
   transition: color 0.15s;
 }
+.reminder-edit:hover  { color: var(--accent2); }
 .reminder-delete:hover { color: #e07070; }
 
 .reminder-empty {

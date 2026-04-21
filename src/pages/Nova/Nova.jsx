@@ -248,7 +248,11 @@ function EventsPanel() {
     try {
       const res  = await apiFetch(`${SCRIPTS.NOVA}?type=events`)
       const data = await res.json()
-      setEvents(toArr(data).sort((a, b) => getDayDiff(a.date) - getDayDiff(b.date)))
+      setEvents(
+        toArr(data)
+          .filter(e => !e.date || getDayDiff(e.date) >= 0)
+          .sort((a, b) => getDayDiff(a.date) - getDayDiff(b.date))
+      )
     } catch (e) { console.error('nova events', e) }
     finally { setLoading(false) }
   }, [])
@@ -329,11 +333,12 @@ function EventsPanel() {
 
 // ── Reminders panel ───────────────────────────────────────────
 function RemindersPanel() {
-  const [reminders, setReminders] = useState([])
-  const [loading, setLoading]     = useState(true)
-  const [showAdd, setShowAdd]     = useState(false)
-  const [form, setForm]           = useState({ text: '', date: '' })
-  const [saving, setSaving]       = useState(false)
+  const [reminders, setReminders]   = useState([])
+  const [loading, setLoading]       = useState(true)
+  const [showAdd, setShowAdd]       = useState(false)
+  const [editReminder, setEditReminder] = useState(null) // reminder object being edited
+  const [form, setForm]             = useState({ text: '', date: '' })
+  const [saving, setSaving]         = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -363,6 +368,23 @@ function RemindersPanel() {
     finally { setSaving(false) }
   }
 
+  async function saveEdit() {
+    if (!form.text) return
+    setSaving(true)
+    try {
+      const fd = new FormData()
+      fd.append('action', 'edit')
+      fd.append('type', 'reminders')
+      fd.append('idx', editReminder.id)
+      fd.append('text', form.text)
+      fd.append('date', form.date)
+      await apiFetch(SCRIPTS.NOVA, { method: 'POST', body: fd })
+      setEditReminder(null)
+      load()
+    } catch (e) { console.error('edit reminder', e) }
+    finally { setSaving(false) }
+  }
+
   async function deleteReminder(id) {
     setReminders(r => r.filter(x => x.id !== id))
     try {
@@ -372,6 +394,11 @@ function RemindersPanel() {
       fd.append('idx', id)
       await apiFetch(SCRIPTS.NOVA, { method: 'POST', body: fd })
     } catch (e) { console.error('delete reminder', e); load() }
+  }
+
+  function openEdit(r) {
+    setForm({ text: r.text ?? '', date: r.date ?? '' })
+    setEditReminder(r)
   }
 
   return (
@@ -391,6 +418,7 @@ function RemindersPanel() {
                     <span className="reminder-dot" style={{ background: 'var(--accent3)' }} />
                     <span className="reminder-text">{r.text}</span>
                     {r.date && <span className="reminder-date">{formatReminderDate(r.date)}</span>}
+                    <button className="reminder-edit" onClick={() => openEdit(r)} title="Edit">✎</button>
                     <button className="reminder-delete" onClick={() => deleteReminder(r.id)}>×</button>
                   </div>
                 ))}
@@ -398,6 +426,7 @@ function RemindersPanel() {
         }
       </Panel>
 
+      {/* Add overlay */}
       {showAdd && (
         <div className="overlay" onClick={e => e.target === e.currentTarget && setShowAdd(false)}>
           <div className="overlay-box">
@@ -416,17 +445,38 @@ function RemindersPanel() {
           </div>
         </div>
       )}
+
+      {/* Edit overlay */}
+      {editReminder && (
+        <div className="overlay" onClick={e => e.target === e.currentTarget && setEditReminder(null)}>
+          <div className="overlay-box">
+            <div className="overlay-title">Edit Reminder</div>
+            <input className="overlay-input" placeholder="What to remember?" value={form.text}
+              onChange={e => setForm(f => ({ ...f, text: e.target.value }))}
+              onKeyDown={e => e.key === 'Enter' && saveEdit()} autoFocus />
+            <input className="overlay-input" type="date" value={form.date}
+              onChange={e => setForm(f => ({ ...f, date: e.target.value }))} />
+            <div className="overlay-actions">
+              <button className="overlay-btn cancel" onClick={() => setEditReminder(null)}>Cancel</button>
+              <button className="overlay-btn submit" onClick={saveEdit} disabled={saving || !form.text}>
+                {saving ? 'Saving…' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   )
 }
 
 // ── To Do panel (Nova's chores) ───────────────────────────────
 function ChoresPanel() {
-  const [chores, setChores]   = useState([])
-  const [loading, setLoading] = useState(true)
-  const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm]       = useState({ name: '', dueDate: '' })
-  const [saving, setSaving]   = useState(false)
+  const [chores, setChores]     = useState([])
+  const [loading, setLoading]   = useState(true)
+  const [showAdd, setShowAdd]   = useState(false)
+  const [editChore, setEditChore] = useState(null)
+  const [form, setForm]         = useState({ name: '', dueDate: '' })
+  const [saving, setSaving]     = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -479,6 +529,29 @@ function ChoresPanel() {
     finally { setSaving(false) }
   }
 
+  async function saveEdit() {
+    if (!form.name.trim()) return
+    setSaving(true)
+    try {
+      const fd = new FormData()
+      fd.append('action', 'edit')
+      fd.append('type', 'chores')
+      fd.append('idx', String(editChore.id))
+      fd.append('name', form.name.trim())
+      fd.append('dueDate', form.dueDate)
+      await apiFetch(SCRIPTS.CHORES, { method: 'POST', body: fd })
+      setEditChore(null)
+      load()
+    } catch (e) { console.error('edit chore', e) }
+    finally { setSaving(false) }
+  }
+
+  function openEdit(e, c) {
+    e.stopPropagation()
+    setForm({ name: c.name ?? '', dueDate: c.dueDate ?? '' })
+    setEditChore(c)
+  }
+
   return (
     <>
       <Panel>
@@ -498,6 +571,7 @@ function ChoresPanel() {
                       onClick={() => toggle(c.id, !!c.done)}>
                       <span className={`chore-item-name${c.done ? ' done' : ''}`}>{c.name}</span>
                       {badge && <span className={`countdown-badge ${badge}`}>{formatDateShort(c.dueDate)}</span>}
+                      <button className="reminder-edit" onClick={e => openEdit(e, c)} title="Edit">✎</button>
                     </div>
                   )
                 })}
@@ -518,6 +592,25 @@ function ChoresPanel() {
               <button className="overlay-btn cancel" onClick={() => setShowAdd(false)}>Cancel</button>
               <button className="overlay-btn submit" onClick={addItem} disabled={saving || !form.name.trim()}>
                 {saving ? 'Saving…' : 'Add'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editChore && (
+        <div className="overlay" onClick={e => e.target === e.currentTarget && setEditChore(null)}>
+          <div className="overlay-box">
+            <div className="overlay-title">Edit To Do</div>
+            <input className="overlay-input" placeholder="Task" value={form.name}
+              onChange={e => setForm(f => ({ ...f, name: e.target.value }))} autoFocus
+              onKeyDown={e => e.key === 'Enter' && saveEdit()} />
+            <input className="overlay-input" type="date" value={form.dueDate}
+              onChange={e => setForm(f => ({ ...f, dueDate: e.target.value }))} />
+            <div className="overlay-actions">
+              <button className="overlay-btn cancel" onClick={() => setEditChore(null)}>Cancel</button>
+              <button className="overlay-btn submit" onClick={saveEdit} disabled={saving || !form.name.trim()}>
+                {saving ? 'Saving…' : 'Save'}
               </button>
             </div>
           </div>
